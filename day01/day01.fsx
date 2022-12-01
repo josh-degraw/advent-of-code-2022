@@ -1,44 +1,21 @@
 open System
 open System.IO
 
-let readInput (fileName: string) =
-    seq {
-        use reader = new StreamReader(fileName)
+let split (delim: string) (str: string) = str.Split delim
 
-        let mutable i = 1
-        let mutable currentTotal = 0
-        while reader.EndOfStream |> not do
-            let next = reader.ReadLine()
-            //printfn $"{currentTotal} - {next}"
-            if String.IsNullOrWhiteSpace next then 
-                yield currentTotal, i
-                currentTotal <- 0
-                i <- i + 1
-            else
-                currentTotal <- currentTotal + int(next)
-        yield currentTotal , i
-    }
+let input =
+    File.ReadAllText(Path.Combine(__SOURCE_DIRECTORY__, "./input.txt"))
+    |> split (Environment.NewLine + Environment.NewLine)
+    |> Array.map ((split Environment.NewLine) >> Array.sumBy int)
 
+let partOne () = input |> Array.max |> printfn "Max: %i"
 
-let partOne()=
-    let input = readInput "./day01/input.txt"
+let partTwo () =
+    input
+    |> Array.sortDescending
+    |> Array.take 3
+    |> Array.sum
+    |> printfn "Top 3 Sum: %A"
 
-    input 
-    |> Seq.map fst
-    |> Seq.max
-    |> printfn "Max: %i"
-
-
-//partOne()
-
-let partTwo()=
-    let input = readInput "./day01/input.txt"
-
-    input 
-    |> Seq.sortByDescending fst
-    |> Seq.take 3
-    |> Seq.toList
-    |> fun top -> (top), (top|> List.map fst |> List.sum)
-    |> printfn "Top 3: %A"
-
-partTwo()
+partOne ()
+partTwo () // 204639
