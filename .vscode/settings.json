@@ -3,5 +3,6 @@
         "activityBar.background": "#1F3301",
         "titleBar.activeBackground": "#2B4801",
         "titleBar.activeForeground": "#F2FEE0"
-    }
+    },
+    "FSharp.inlayHints.parameterNames": false
 }
