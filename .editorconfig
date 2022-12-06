@@ -1,6 +1,6 @@
 [*.fsx]
 indent_style = space
-indent_size = 2
+indent_size = 3
 fsharp_space_before_parameter = true
 fsharp_space_before_lowercase_invocation = true
 fsharp_space_before_uppercase_invocation = true
