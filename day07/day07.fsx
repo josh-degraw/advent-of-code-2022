@@ -9,7 +9,7 @@ type TreeNode (name: string, initialContents: NodeContents, parent: TreeNode opt
    member val private _children =
       match initialContents with
       | Dir contents -> ResizeArray contents
-      | _ -> ResizeArray ()
+      | File _ -> ResizeArray ()
 
    member val Name = name
    member val Parent = parent
@@ -55,24 +55,6 @@ let rec getRoot (tree: TreeNode) =
    | None -> tree
    | Some parent -> getRoot parent
 
-let printTree (tree: TreeNode) =
-   let rec printInner indent (current: TreeNode) =
-      printfn $"{String (' ', indent)}- %O{current}"
-
-      match current.Contents with
-      | File _ -> ()
-      | Dir children -> children |> List.iter (printInner (indent + 2))
-
-   printInner 0 (getRoot tree)
-
-
-let dump (a: TreeNode) =
-   printTree a
-   a
-
-let getParent (node: TreeNode) =
-   node.Parent
-
 let getName (node: TreeNode) =
    node.Name
 
@@ -111,8 +93,6 @@ let (|FileSize|_|) (input: string) =
       None
 
 let rec cd next (current: TreeNode) =
-   //printfn $"cd {next} from %A{current.Name}"
-
    match next with
    | "/" -> getRoot current
    | ".." -> current.Parent |> Option.defaultValue current
@@ -136,7 +116,6 @@ let rec addChild next (tree: TreeNode) =
 
       tree.AddChild nextNode
 
-
 let parseCommand (tree: TreeNode) (input: string) =
    match input with
    | Command "ls" -> tree
@@ -146,8 +125,6 @@ let parseCommand (tree: TreeNode) (input: string) =
    | _ -> failwithf "Unknown command %s" input
 
 
-let root = inputText () |> Array.fold parseCommand emptyTree |> getRoot
-
 let getDirSizes (tree: TreeNode) =
    let rec collect total (next: TreeNode) =
       match next.Contents with
@@ -156,6 +133,9 @@ let getDirSizes (tree: TreeNode) =
 
    collect [] tree
 
+// Solutions
+
+let root = inputText () |> Array.fold parseCommand emptyTree |> getRoot
 
 let partOne =
    root
