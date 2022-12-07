@@ -4,56 +4,25 @@ open System.IO
 open System.Collections.Generic
 
 let inputText () =
-   File.ReadAllText (Path.Combine (__SOURCE_DIRECTORY__, "./input.txt"))
+   File.ReadAllText (Path.Combine (__SOURCE_DIRECTORY__, "./sample-input.txt"))
 
-type Crate = string list //Stack<string>
-
+type Crate = Stack<string>
 type Crates = Map<int, Crate>
 
-let push (crate: Crate) a : Crate =
-   // crate.Push a
-   // crate
-   a :: crate
-//crate @ [ a ]
-
-let pop (crate: Crate) =
-   // let head = crate.Pop ()
-   // head, crate
-   match crate with
-   | head :: tail -> head, tail
-   | _ -> failwith "Invalid pop"
-
-let move from to' (crates: Crates) : Crates =
-   let item, rest = pop crates[from]
-
-   crates
-   |> Map.add from rest
-   |> Map.change to' (fun existing -> existing |> Option.map (fun v -> push v item))
-
-let tryPeek (crate: Crate) =
-   crate //.TryPeek ()
-   |> List.tryHead
-   |> function
-      | None -> false, null
-      | Some v -> true, v
+// Utilities
 
 let len (crate: Crate) =
-   //crate.Count
-
-   crate.Length
+   crate.Count
 
 let empty () : Crate =
-   []
-//Crate ()
+   Crate ()
 
 let printCrates (crates: Crates) =
    let longest = crates.Values |> Seq.maxBy len |> len
 
-   [
-      for crate in crates.Values do
-         let reversed = crate |> Seq.rev |> Seq.toArray
-         List.init longest (fun i -> Array.tryItem i reversed)
-   ]
+   crates.Values
+   |> Seq.map (fun crate -> List.init longest (fun i -> Seq.tryItem i (crate |> Seq.rev)))
+   |> Seq.toList
    |> List.transpose
    |> List.rev
    |> fun grid ->
@@ -72,58 +41,60 @@ let printCrates (crates: Crates) =
 
    crates
 
+// Parsing
 let parseLine (line: string) =
-   Regex.Matches (line, """(\[\w\] ?|   )""")
-   |> Seq.cast<Match>
-   |> Seq.toList
-   |> List.mapi (fun i match' ->
-      let id = int i + 1
+   let itemRegex = Regex """(\[\w\] ?|   )"""
 
+   itemRegex.Matches line
+   |> Seq.cast<Match>
+   |> Seq.mapi (fun i match' ->
       match match'.Value.Trim () with
-      | "" -> id, None
-      | value -> id, Some value)
+      | "" -> i + 1, None
+      | value -> i + 1, Some value
+   )
+   |> Seq.toList
 
 let parseCrates (input: string) =
    input.Split Environment.NewLine
    |> Array.rev
    |> Array.skip 1
-   |> Array.rev
    |> Array.fold
-         (fun crates line ->
-            parseLine line
-            |> List.fold
-                  (fun crates (id, contents) ->
-                     crates
-                     |> Map.change id (fun maybeExisting ->
-                        let crate = maybeExisting |> Option.defaultWith empty
+      (fun crates line ->
+         parseLine line
+         |> List.fold
+            (fun crates (id, contents) ->
+               crates
+               |> Map.change
+                  id
+                  (fun maybeExisting ->
+                     let crate = maybeExisting |> Option.defaultWith empty
+                     contents |> Option.iter crate.Push
+                     Some crate
+                  )
+            )
+            crates
+      )
+      Map.empty
 
-                        match contents with
-                        | Some v -> push crate v
-                        | None -> crate
-                        |> Some))
-                  crates)
-         Map.empty
-   |> Map.map (fun k v -> v |> List.rev)
+let (|Instruction|_|) (input: string) =
+   let reg = Regex """move (\d+) from (\d+) to (\d+)"""
+   let match' = reg.Match (input)
+
+   if not match'.Success then
+      None
+   else
+      let groups = match'.Groups
+      let count, from, to' = groups.[1], groups.[2], groups.[3]
+
+      Some (int count.Value, int from.Value, int to'.Value)
 
 let parseInstructions (input: string) =
-   let reg = new Regex ("""move (\d+) from (\d+) to (\d+)""")
-
-   [
-      for line in input.Split Environment.NewLine do
-         let match' = reg.Match line
-
-         if not match'.Success then
-            failwith "Invalid input"
-
-         let groups = match'.Groups
-         let count, from, to' = groups.[1], groups.[2], groups.[3]
-
-         {|
-            Count = int count.Value
-            From = int from.Value
-            To = int to'.Value
-         |}
-   ]
+   input.Split Environment.NewLine
+   |> Seq.map (fun line ->
+      match line with
+      | Instruction (count, from, to') -> count, from, to'
+      | _ -> failwith "Invalid input"
+   )
 
 let parseSegments () =
    let split = inputText().Split (Environment.NewLine + Environment.NewLine)
@@ -132,6 +103,7 @@ let parseSegments () =
    | [| crates; instructions |] -> parseCrates crates, parseInstructions instructions
    | _ -> failwith "Invalid input"
 
+// Solution
 
 let partOne =
    let mutable i = 1
@@ -139,37 +111,25 @@ let partOne =
 
    printCrates crateMap |> ignore
 
-   let result =
-      instructions
-      |> List.fold
-            (fun crates command ->
-               printfn $"Step {i}: move {command.Count} from {command.From} to {command.To}"
+   for count, from, to' in instructions do
 
-               [ 1 .. command.Count ]
-               |> List.fold (fun crates _ -> crates |> move command.From command.To) crates
-               |> printCrates)
-            crateMap
+      let fromCrate = crateMap.Item from
+      let toCrate = crateMap.Item to'
 
-   // for command in instructions do
-   //    let fromCrate = crateMap.Item command.From
-   //    let toCrate = crateMap.Item command.To
+      printfn $"Step {i}: move {count} from {from} to {to'}"
 
-   //    printfn $"Step {i}: move {command.Count} from {command.From} to {command.To}"
+      for _ in 1..count do
+         let item = fromCrate.Pop ()
+         toCrate.Push item
 
-   //    for _ in 1 .. command.Count do
-   //       let item = pop fromCrate
-   //       push toCrate item
-   //       // let item = pop fromCrate
-   //       // push toCrate item
-
-   //       //printCrates crateMap
-   //       i <- i + 1
+         printCrates crateMap |> ignore
+         i <- i + 1
 
    String.Join (
       "",
       seq {
-         for crate in result do
-            let hasVal, value = crate.Value |> tryPeek
+         for crate in crateMap do
+            let hasVal, value = crate.Value.TryPeek ()
 
             if hasVal then
                value.Trim ('[', ']')
